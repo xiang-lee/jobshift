@@ -1,5 +1,3 @@
 User-agent: *
 Allow: /
-
-# Add your final sitemap URL after deployment, for example:
-# Sitemap: https://your-subdomain.example.com/sitemap.xml
+Sitemap: https://jobshift.xiangli.dev/sitemap.xml
