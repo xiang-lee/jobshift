@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Job Exposure Report</title>
+  <meta name="description" content="A bilingual report comparing jobs that are more exposed and less exposed to AI-driven change, based on the mariodian/jobs filters branch dataset." />
+  <meta property="og:title" content="AI Job Exposure Report" />
+  <meta property="og:description" content="Which jobs are easier for AI to reshape, and which still rely more on people." />
+  <meta property="og:type" content="website" />
+  <meta property="og:image" content="/assets/og-preview.png" />
+  <meta property="twitter:card" content="summary_large_image" />
+  <meta property="twitter:title" content="AI Job Exposure Report" />
+  <meta property="twitter:description" content="Which jobs are easier for AI to reshape, and which still rely more on people." />
+  <meta property="twitter:image" content="/assets/og-preview.png" />
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml" />
+  <style>
+    :root {
+      --bg: #08111f;
+      --panel: rgba(15, 23, 42, 0.82);
+      --border: rgba(255,255,255,.09);
+      --ink: #edf4ff;
+      --muted: #b4bfd5;
+      --soft: #dbeafe;
+      --danger: #ef4444;
+      --danger-soft: rgba(239,68,68,.12);
+      --safe: #16a34a;
+      --safe-soft: rgba(22,163,74,.12);
+      --mid: #60a5fa;
+      --mid-soft: rgba(96,165,250,.10);
+      --shadow: 0 18px 48px rgba(0,0,0,.24);
+      --radius: 24px;
+      --max: 1240px;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 20% 0%, rgba(59,130,246,.16), transparent 28%),
+        radial-gradient(circle at 80% 0%, rgba(99,102,241,.18), transparent 30%),
+        linear-gradient(180deg, #08111f 0%, #091425 100%);
+      line-height: 1.6;
+    }
+    a { color: #93c5fd; }
+    .wrap { max-width: var(--max); margin: 0 auto; padding: 24px 18px 56px; }
+    .topbar {
+      display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 18px;
+      position: sticky; top: 0; z-index: 20; backdrop-filter: blur(10px);
+      background: rgba(8,17,31,.58); padding: 10px 0 12px;
+    }
+    .brand { display: flex; align-items: center; gap: 12px; color: var(--soft); text-decoration: none; }
+    .brand-badge {
+      width: 40px; height: 40px; border-radius: 14px;
+      background: linear-gradient(135deg, rgba(59,130,246,.28), rgba(168,85,247,.28));
+      border: 1px solid var(--border); display: grid; place-items: center; font-weight: 700;
+      flex: 0 0 auto;
+    }
+    .controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .navlink, .lang-btn {
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,.05);
+      color: var(--muted);
+      cursor: pointer;
+      padding: 8px 14px;
+      border-radius: 999px;
+      font: inherit;
+      font-weight: 600;
+      text-decoration: none;
+    }
+    .navlink:hover, .lang-btn:hover { color: white; }
+    .lang-toggle { display: inline-flex; padding: 4px; background: rgba(255,255,255,.05); border: 1px solid var(--border); border-radius: 999px; }
+    .lang-btn { border: 0; background: transparent; }
+    .lang-btn.active { background: rgba(255,255,255,.12); color: white; }
+    .hero {
+      background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+      border: 1px solid var(--border);
+      border-radius: 28px;
+      box-shadow: var(--shadow);
+      padding: 28px;
+      overflow: hidden;
+      position: relative;
+    }
+    .hero::after {
+      content: "";
+      position: absolute; inset: auto -80px -80px auto; width: 240px; height: 240px; border-radius: 50%;
+      background: radial-gradient(circle, rgba(96,165,250,.22) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .kicker {
+      display: inline-flex; align-items: center; gap: 10px; border: 1px solid var(--border); border-radius: 999px;
+      padding: 8px 12px; background: rgba(255,255,255,.04); color: var(--soft); font-size: 13px;
+    }
+    .hero h1 { margin: 16px 0 10px; font-size: clamp(32px, 6vw, 56px); line-height: 1.06; max-width: 980px; }
+    .hero p { margin: 0; max-width: 880px; color: var(--muted); font-size: 17px; }
+    .hero-actions { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 22px; }
+    .anchor-btn {
+      display: inline-flex; align-items: center; gap: 10px; padding: 11px 16px; border-radius: 999px; text-decoration: none;
+      border: 1px solid var(--border); background: rgba(255,255,255,.05); color: white; font-weight: 600;
+    }
+    .grid { display: grid; gap: 16px; }
+    .cards { grid-template-columns: repeat(4, minmax(0, 1fr)); margin-top: 20px; }
+    .insight-cards { grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: 16px; }
+    .legend, .sources, .duo, .takeaways { display: grid; gap: 16px; }
+    .legend { grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: 18px; }
+    .sources { grid-template-columns: 1fr 1fr; margin-top: 18px; }
+    .duo { grid-template-columns: 1fr 1fr; }
+    .takeaways { grid-template-columns: 1.2fr .8fr; margin-top: 18px; }
+    .card {
+      background: var(--panel);
+      backdrop-filter: blur(10px);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 18px;
+    }
+    .eyebrow { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 8px; }
+    .metric-value { font-size: clamp(28px, 4vw, 40px); font-weight: 760; line-height: 1.05; }
+    .metric-text { color: var(--muted); font-size: 14px; margin-top: 8px; }
+    .mini-note { color: var(--muted); font-size: 12px; margin-top: 6px; }
+    .legend-item, .callout, .mini-card {
+      border: 1px solid var(--border); border-radius: 20px; padding: 16px; background: rgba(255,255,255,.03);
+    }
+    .mini-card h3, .legend-item h3 { margin: 10px 0 6px; font-size: 18px; }
+    .mini-card p, .legend-item p, .callout p { color: var(--muted); margin: 0; }
+    .tag {
+      display: inline-flex; align-items: center; gap: 8px; border-radius: 999px; padding: 7px 11px; font-size: 12px;
+      font-weight: 700; border: 1px solid var(--border);
+    }
+    .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+    .tag.high { background: var(--danger-soft); }
+    .tag.high .dot { background: var(--danger); }
+    .tag.low { background: var(--safe-soft); }
+    .tag.low .dot { background: var(--safe); }
+    .tag.mid { background: var(--mid-soft); }
+    .tag.mid .dot { background: var(--mid); }
+    .section-title { margin: 28px 0 12px; font-size: clamp(24px, 3vw, 34px); }
+    .section-text { color: var(--muted); max-width: 920px; margin: 0 0 16px; }
+    .report-panel {
+      position: relative; overflow: hidden; padding: 22px; background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+    }
+    .report-panel.high { outline: 1px solid rgba(239,68,68,.18); }
+    .report-panel.low { outline: 1px solid rgba(22,163,74,.18); }
+    .report-panel h3 { margin: 14px 0 8px; font-size: 28px; }
+    .report-panel p { margin: 0; color: var(--muted); }
+    .stat-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 18px; }
+    .stat { border: 1px solid var(--border); border-radius: 18px; padding: 14px; background: rgba(255,255,255,.03); }
+    .stat strong { display: block; font-size: 24px; line-height: 1.1; margin-bottom: 6px; }
+    .stat span { color: var(--muted); font-size: 13px; }
+    .compare-wrap { margin-top: 8px; }
+    .compare-row {
+      display: grid; grid-template-columns: 170px 1fr; gap: 12px; align-items: start; padding: 14px 0;
+      border-bottom: 1px solid rgba(255,255,255,.06);
+    }
+    .compare-label { font-weight: 650; }
+    .bar-group { display: grid; gap: 10px; }
+    .bar-line { display: grid; grid-template-columns: 180px 1fr 90px; gap: 10px; align-items: center; }
+    .line-label { color: var(--muted); font-size: 13px; }
+    .bar-track { height: 12px; border-radius: 999px; background: rgba(255,255,255,.08); overflow: hidden; position: relative; }
+    .bar-fill { height: 100%; border-radius: 999px; }
+    .bar-fill.high { background: linear-gradient(90deg, #dc2626, #f87171); }
+    .bar-fill.low { background: linear-gradient(90deg, #15803d, #4ade80); }
+    .bar-value { text-align: right; font-variant-numeric: tabular-nums; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 14px 10px; border-bottom: 1px solid rgba(255,255,255,.07); vertical-align: top; text-align: left; }
+    th { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .08em; }
+    .job-name { font-weight: 700; margin-bottom: 4px; }
+    .job-sub { color: var(--muted); font-size: 12px; }
+    .why { color: var(--muted); font-size: 13px; margin-top: 8px; max-width: 50ch; }
+    .source-list { margin: 10px 0 0; padding-left: 18px; color: var(--muted); }
+    .source-list li { margin-bottom: 10px; }
+    .source-list a { color: #93c5fd; text-decoration: none; border-bottom: 1px dashed rgba(147,197,253,.4); }
+    .source-list a:hover { color: #bfdbfe; }
+    .footer-note { color: var(--muted); font-size: 12px; margin-top: 10px; }
+    .pill {
+      display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--border); border-radius: 999px; padding: 7px 11px;
+      background: rgba(255,255,255,.04); color: var(--soft); font-size: 12px; font-weight: 600;
+    }
+    footer {
+      margin-top: 36px; padding-top: 18px; border-top: 1px solid rgba(255,255,255,.08);
+      color: var(--muted); display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-between;
+      font-size: 14px;
+    }
+    @media (max-width: 1080px) {
+      .cards, .insight-cards, .legend, .duo, .takeaways, .sources { grid-template-columns: 1fr; }
+      .bar-line { grid-template-columns: 1fr; }
+      .compare-row { grid-template-columns: 1fr; }
+      .topbar { position: static; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="topbar">
+      <a class="brand" href="/">
+        <div class="brand-badge">AI</div>
+        <div>
+          <div style="font-weight: 700;" id="brandTitle">AI Job Exposure Report</div>
+          <div style="color: var(--muted); font-size: 13px;" id="brandSubtitle">Built from the mariodian/jobs filters branch dataset</div>
+        </div>
+      </a>
+      <div class="controls">
+        <a class="navlink" href="/distribution.html" id="navDistribution">Jobs distribution</a>
+        <div class="lang-toggle" role="tablist" aria-label="Language switcher">
+          <button class="lang-btn active" data-lang="zh" aria-selected="true">中文</button>
+          <button class="lang-btn" data-lang="en" aria-selected="false">EN</button>
+        </div>
+      </div>
+    </div>
+
+    <section class="hero">
+      <div class="kicker" id="heroKicker"></div>
+      <h1 id="heroTitle"></h1>
+      <p id="heroText"></p>
+      <div class="hero-actions">
+        <a class="anchor-btn" href="#comparison" id="heroBtn1"></a>
+        <a class="anchor-btn" href="#sources" id="heroBtn2"></a>
+      </div>
+    </section>
+
+    <section class="grid cards">
+      <div class="card">
+        <div class="eyebrow" id="card1Label"></div>
+        <div class="metric-value" id="totalJobs"></div>
+        <div class="metric-text" id="card1Text"></div>
+        <div class="mini-note" id="card1Note"></div>
+      </div>
+      <div class="card">
+        <div class="eyebrow" id="card2Label"></div>
+        <div class="metric-value" id="highShare"></div>
+        <div class="metric-text" id="card2Text"></div>
+      </div>
+      <div class="card">
+        <div class="eyebrow" id="card3Label"></div>
+        <div class="metric-value" id="lowShare"></div>
+        <div class="metric-text" id="card3Text"></div>
+      </div>
+      <div class="card">
+        <div class="eyebrow" id="card4Label"></div>
+        <div class="metric-value" id="midShare"></div>
+        <div class="metric-text" id="card4Text"></div>
+      </div>
+    </section>
+
+    <section class="grid insight-cards">
+      <div class="mini-card">
+        <div class="pill" id="quickPill1"></div>
+        <h3 id="quickTitle1"></h3>
+        <p id="quickText1"></p>
+      </div>
+      <div class="mini-card">
+        <div class="pill" id="quickPill2"></div>
+        <h3 id="quickTitle2"></h3>
+        <p id="quickText2"></p>
+      </div>
+      <div class="mini-card">
+        <div class="pill" id="quickPill3"></div>
+        <h3 id="quickTitle3"></h3>
+        <p id="quickText3"></p>
+      </div>
+    </section>
+
+    <section class="legend">
+      <div class="legend-item">
+        <span class="tag high"><span class="dot"></span><span id="legendHighTag"></span></span>
+        <h3 id="legendHighTitle"></h3>
+        <p id="legendHighText"></p>
+      </div>
+      <div class="legend-item">
+        <span class="tag low"><span class="dot"></span><span id="legendLowTag"></span></span>
+        <h3 id="legendLowTitle"></h3>
+        <p id="legendLowText"></p>
+      </div>
+      <div class="legend-item">
+        <span class="tag mid"><span class="dot"></span><span id="legendMidTag"></span></span>
+        <h3 id="legendMidTitle"></h3>
+        <p id="legendMidText"></p>
+      </div>
+    </section>
+
+    <h2 class="section-title" id="panelTitle"></h2>
+    <p class="section-text" id="panelText"></p>
+
+    <section class="duo">
+      <article class="card report-panel high">
+        <span class="tag high"><span class="dot"></span><span id="highTag"></span></span>
+        <h3 id="highTitle"></h3>
+        <p id="highText"></p>
+        <div class="stat-grid" id="highStats"></div>
+      </article>
+      <article class="card report-panel low">
+        <span class="tag low"><span class="dot"></span><span id="lowTag"></span></span>
+        <h3 id="lowTitle"></h3>
+        <p id="lowText"></p>
+        <div class="stat-grid" id="lowStats"></div>
+      </article>
+    </section>
+
+    <h2 class="section-title" id="comparison"></h2>
+    <p class="section-text" id="comparisonText"></p>
+    <section class="card compare-wrap">
+      <div id="compareRows"></div>
+    </section>
+
+    <section class="takeaways">
+      <div class="callout">
+        <h3 id="signalTitle"></h3>
+        <p id="signalText"></p>
+      </div>
+      <div class="callout">
+        <h3 id="readTitle"></h3>
+        <p id="readText"></p>
+      </div>
+    </section>
+
+    <h2 class="section-title" id="jobsTitle"></h2>
+    <p class="section-text" id="jobsText"></p>
+
+    <section class="duo">
+      <div class="card">
+        <div class="eyebrow" id="highJobsLabel"></div>
+        <table>
+          <thead>
+            <tr>
+              <th id="thJob1"></th>
+              <th id="thJobs1"></th>
+              <th id="thPay1"></th>
+              <th id="thOutlook1"></th>
+            </tr>
+          </thead>
+          <tbody id="highTable"></tbody>
+        </table>
+      </div>
+      <div class="card">
+        <div class="eyebrow" id="lowJobsLabel"></div>
+        <table>
+          <thead>
+            <tr>
+              <th id="thJob2"></th>
+              <th id="thJobs2"></th>
+              <th id="thPay2"></th>
+              <th id="thOutlook2"></th>
+            </tr>
+          </thead>
+          <tbody id="lowTable"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <h2 class="section-title" id="limitsTitle"></h2>
+    <p class="section-text" id="limitsText"></p>
+    <section class="duo">
+      <div class="callout">
+        <h3 id="limitBox1Title"></h3>
+        <p id="limitBox1Text"></p>
+      </div>
+      <div class="callout">
+        <h3 id="limitBox2Title"></h3>
+        <p id="limitBox2Text"></p>
+      </div>
+    </section>
+
+    <h2 class="section-title" id="sources"></h2>
+    <section class="sources">
+      <div class="card">
+        <div class="eyebrow" id="sourcesLabel"></div>
+        <ul class="source-list" id="sourceList"></ul>
+      </div>
+      <div class="card">
+        <div class="eyebrow" id="methodLabel"></div>
+        <ul class="source-list" id="methodList"></ul>
+        <div class="footer-note" id="methodNote"></div>
+      </div>
+    </section>
+
+    <footer>
+      <div id="footerLeft">Built for public deployment as a static site.</div>
+      <div id="footerRight">Best deployed on GitHub + Cloudflare Pages.</div>
+    </footer>
+  </div>
+
+  <script>
+    const DATA = {
+      summary: {
+        totalJobsM: 143.1,
+        weightedBaseOccupations: 341,
+        allOccupations: 342,
+        simpleAvg: 5.3,
+        weightedAvg: 4.9,
+        excludedOccupation: 'Military careers',
+        repoUrl: 'https://github.com/mariodian/jobs/tree/filters',
+        readmeUrl: 'https://github.com/mariodian/jobs/blob/filters/README.md',
+        csvUrl: 'https://github.com/mariodian/jobs/blob/filters/occupations.csv',
+        scoresUrl: 'https://github.com/mariodian/jobs/blob/filters/scores.json',
+        blsUrl: 'https://www.bls.gov/ooh/'
+      },
+      groups: {
+        high: { occupations: 60, jobsM: 25.21, sharePct: 17.6, weightedExposure: 8.57, weightedPay: 72799, weightedOutlook: 1.3 },
+        mid: { occupations: 236, jobsM: 87.92, sharePct: 61.5, weightedExposure: 4.92, weightedPay: 66421, weightedOutlook: 3.1 },
+        low: { occupations: 45, jobsM: 29.94, sharePct: 20.9, weightedExposure: 1.79, weightedPay: 41755, weightedOutlook: 5.9 }
+      },
+      highTop: [
+        { title_en: 'Secretaries and administrative assistants', title_zh: '秘书与行政助理', jobsM: 3.45, pay: 47460, outlook: 0.0, education_en: 'High school diploma or equivalent', education_zh: '高中学历或同等学历', exposure: 8, why_en: 'A large share of the work is scheduling, drafting, filing, and information routing, which AI tools can already assist with.', why_zh: '很多工作是排程、起草、整理和转发信息，这些正是 AI 很容易切入的任务。' },
+        { title_en: 'Customer service representatives', title_zh: '客服代表', jobsM: 2.81, pay: 42830, outlook: -5.0, education_en: 'High school diploma or equivalent', education_zh: '高中学历或同等学历', exposure: 9, why_en: 'Many requests follow repeatable scripts, so chatbots and AI agents can handle more of the first line.', why_zh: '很多客服问题有固定流程，因此聊天机器人和 AI agent 很适合先接住第一层需求。' },
+        { title_en: 'General office clerks', title_zh: '办公室文员', jobsM: 2.65, pay: 43630, outlook: -7.0, education_en: 'High school diploma or equivalent', education_zh: '高中学历或同等学历', exposure: 9, why_en: 'Routine office processing and data handling are highly automatable once the workflow is digital.', why_zh: '一旦流程进入电脑，很多重复性的办公室处理和数据整理就更容易被自动化。' },
+        { title_en: 'Software developers, quality assurance analysts, and testers', title_zh: '软件开发、测试与质量分析人员', jobsM: 1.9, pay: 131450, outlook: 15.0, education_en: "Bachelor's degree", education_zh: '学士学位', exposure: 9, why_en: 'Coding and testing are not disappearing, but AI can boost output per person, which can change team size and job shape.', why_zh: '写代码和测试不会消失，但 AI 能显著提高人均产出，所以团队规模和岗位形态都可能变化。' },
+        { title_en: 'Bookkeeping, accounting, and auditing clerks', title_zh: '簿记、会计与审计文员', jobsM: 1.61, pay: 49210, outlook: -6.0, education_en: 'Some college, no degree', education_zh: '大学课程经历但无学位', exposure: 9, why_en: 'This work is structured, rules-based, and document-heavy, making it a natural target for automation.', why_zh: '这类工作规则明确、表单很多、流程标准化，本来就是自动化最容易吃进去的领域。' },
+        { title_en: 'Accountants and auditors', title_zh: '会计与审计师', jobsM: 1.58, pay: 81680, outlook: 5.0, education_en: "Bachelor's degree", education_zh: '学士学位', exposure: 8, why_en: 'Higher-level judgment still matters, but data preparation, reconciliation, and first-pass analysis can be accelerated by AI.', why_zh: '高层判断仍然重要，但数据准备、核对和第一轮分析，已经越来越适合交给 AI 辅助。' }
+      ],
+      lowTop: [
+        { title_en: 'Hand laborers and material movers', title_zh: '装卸与搬运工', jobsM: 6.95, pay: 37680, outlook: 4.0, education_en: 'No formal educational credential', education_zh: '无正式学历要求', exposure: 2, why_en: 'Moving objects in messy real-world environments still depends heavily on people, not just software.', why_zh: '在复杂真实环境里搬运东西，今天仍然主要依赖人，而不是纯软件。' },
+        { title_en: 'Home health and personal care aides', title_zh: '居家健康与个人护理助理', jobsM: 4.35, pay: 34900, outlook: 17.0, education_en: 'High school diploma or equivalent', education_zh: '高中学历或同等学历', exposure: 2, why_en: 'Care work combines physical help, trust, and human presence, which are hard to replace with AI alone.', why_zh: '照护工作同时需要身体协助、信任和陪伴，这些都不是单靠 AI 就能替代的。' },
+        { title_en: 'Janitors and building cleaners', title_zh: '清洁与楼宇保洁人员', jobsM: 2.45, pay: 35930, outlook: 2.0, education_en: 'No formal educational credential', education_zh: '无正式学历要求', exposure: 1, why_en: 'Cleaning involves varied spaces, physical movement, and constant adaptation to the environment.', why_zh: '清洁工作面对的是各种各样的空间，需要真实移动和不断适应环境。' },
+        { title_en: 'Construction laborers and helpers', title_zh: '建筑工与施工辅助人员', jobsM: 1.65, pay: 46050, outlook: 7.0, education_en: 'See How to Become One', education_zh: '需查看具体入行路径', exposure: 1, why_en: 'Construction sites are physical, change every day, and require manual coordination that is difficult to automate end to end.', why_zh: '工地是高度物理化、每天都在变化的环境，很难被一套自动化流程完全接管。' },
+        { title_en: 'General maintenance and repair workers', title_zh: '综合维修与保养工', jobsM: 1.63, pay: 48620, outlook: 4.0, education_en: 'High school diploma or equivalent', education_zh: '高中学历或同等学历', exposure: 2, why_en: 'Repair work depends on on-site inspection and hands-on problem solving in unpredictable situations.', why_zh: '维修很依赖现场判断和动手解决问题，情况往往不可预先完全标准化。' },
+        { title_en: 'Nursing assistants and orderlies', title_zh: '护理助理与护工', jobsM: 1.5, pay: 39430, outlook: 2.0, education_en: 'See How to Become One', education_zh: '需查看具体入行路径', exposure: 2, why_en: 'Patient support requires lifting, cleaning, monitoring, and direct human care in real time.', why_zh: '护理辅助需要搬扶、清洁、观察和即时照护，这些都离不开真人在场。' }
+      ]
+    };
+
+    const I18N = JSON.parse(String.raw`{"zh":{"navDistribution":"看 jobs 分布页","brandTitle":"AI Job Exposure Report","brandSubtitle":"基于 mariodian/jobs 的 filters 分支数据重做","heroKicker":"给普通人看的版本：这不是在说谁会立刻失业，而是在说哪些工作更容易被 AI 改变","heroTitle":"哪些工作更容易被 AI 重塑，哪些还更依赖人","heroText":"这份页面把仓库里的 AI exposure 分数，拆成两端来看：更容易被 AI 改变的工作，以及目前仍然更依赖人到现场完成的工作。这里的 risk 不是好坏判断，也不是明天就会失业，而是 AI 对工作内容和用工数量的影响强度。","heroBtn1":"看关键对比","heroBtn2":"看数据来源","card1Label":"数据覆盖","card1Text":"按 2024 年就业人数加权，这页覆盖 143.1M 个 jobs","card1Note":"342 个职业里有 341 个能参与加权计算","card2Label":"更容易被 AI 改变","card2Text":"分数 8–10，占全部就业的这一部分","card3Label":"目前更依赖人","card3Text":"分数 0–2，占全部就业的这一部分","card4Label":"中间地带","card4Text":"分数 3–7，大多数工作都落在这里","quickPill1":"关键差值","quickTitle1":"加权平均分比简单平均更低","quickText1":"这个数据集里，所有职业的简单平均 exposure 是 5.3，但按就业人数加权以后是 4.9。意思是：真正承载最多就业量的岗位，整体没有职业名单看起来那么高暴露。","quickPill2":"就业大头","quickTitle2":"真正最大的不是红，也不是绿，而是中间地带","quickText2":"分数 3–7 的中间区间占了 61.5% 的 jobs。这一点很重要，因为它提醒读者：大多数工作既不会完全不受影响，也不会一夜之间被替代。","quickPill3":"最值得记住","quickTitle3":"更依赖人的工作，就业量略高；更高暴露的工作，工资更高","quickText3":"低暴露组比高暴露组多出约 4.7M 个 jobs，但高暴露组的加权年薪中位数明显更高。这是这页最反直觉、也最值得转发的一点。","legendHighTag":"红色：更容易被 AI 改变","legendHighTitle":"通常是数字化、文档化、屏幕内完成的工作","legendHighText":"比如排程、文档处理、客服、报表、分析、代码、审核。AI 不一定完全替代，但很可能提高人均产出，减少同样产出所需的人数。","legendLowTag":"绿色：目前更依赖人","legendLowTitle":"通常更依赖现场、身体动作、照护和真实环境","legendLowText":"比如搬运、清洁、维修、施工、照护。AI 当然也能辅助，但很难越过最后一公里的身体在场和即时判断。","legendMidTag":"蓝色：中间地带","legendMidTitle":"大多数工作其实都在中间，不是绝对安全，也不是马上消失","legendMidText":"这也是为什么公开讨论 AI 和就业时，最容易误读的不是数据，而是把连续变化想成二元结论。","panelTitle":"两边到底差在哪里","panelText":"为了让结果更清楚，这里把更容易被 AI 改变的工作定义成 exposure 8–10，把目前更依赖人的工作定义成 exposure 0–2。这样两边都更纯一些，也更适合给普通读者快速理解。","highTag":"更容易被 AI 改变 · 分数 8–10","highTitle":"高暴露工作","highText":"这类工作往往能在电脑里完成，信息密度高，流程可复制，所以 AI 更容易先改变它们的做法和团队配置。","lowTag":"目前更依赖人 · 分数 0–2","lowTitle":"低暴露工作","lowText":"这类工作更依赖身体在场、人与人的接触、或者复杂现实环境里的即时处理，所以暂时更难被纯软件吞掉。","highStats":["职业数","就业人数","加权年薪中位数","加权增长前景"],"lowStats":["职业数","就业人数","加权年薪中位数","加权增长前景"],"comparison":"直接对比","comparisonText":"最值得看的不是分数本身，而是这两边承载了多少就业、工资大概多少、增长前景如何。这样才更接近现实世界里的冲击方式。","compareLabels":{"jobs":"就业人数","pay":"加权年薪中位数","outlook":"加权增长前景","occupations":"职业数"},"compareSeriesHigh":"更容易被 AI 改变","compareSeriesLow":"目前更依赖人","signalTitle":"一句话结论","signalText":"这份数据里，更依赖人的工作承载的就业量略高，达到 {lowJobs}，高于更容易被 AI 改变的 {highJobs}。但工资情况正好反过来：高暴露工作加权年薪大约 {highPay}，明显高于低暴露工作的 {lowPay}。这意味着这里最先被 AI 深刻改造的，不一定是最低薪的工作，而是那些高度数字化、信息密集、能在电脑里完成的工作。","readTitle":"不要怎么读","readText":"不要把红色理解成马上消失，也不要把绿色理解成永远安全。更准确的说法是：红色更可能先发生工作内容重组和 headcount 压缩，绿色则更可能先被 AI 作为辅助工具包围，而不是被直接替代。","jobsTitle":"代表性的工作","jobsText":"下面不是随便举例，而是优先列出真正承载较大就业量的代表岗位，并用更容易理解的话解释它们为什么落在这边。","highJobsLabel":"更容易被 AI 改变的代表岗位","lowJobsLabel":"目前更依赖人的代表岗位","thJob":"工作","thJobs":"就业人数","thPay":"年薪中位数","thOutlook":"增长前景","jobSub":"分数 {exposure} · 入行门槛：{education}","limitsTitle":"这份报告没有告诉你的事","limitsText":"一个适合公开部署的页面，不只要讲结论，也要告诉读者结论的边界。下面这两点能帮你避免被误读。","limitBox1Title":"它不是官方预测","limitBox1Text":"这里的 exposure 分数来自仓库作者设计的一套评分 rubric，再交给大语言模型去打分。它很有解释力，但它不是美国官方机构直接发布的就业预测。更适合把它当作一个有依据的观察框架，而不是唯一答案。","limitBox2Title":"它说的是重塑强度，不只是替代强度","limitBox2Text":"高暴露不等于职业消失，很多高暴露岗位可能继续存在，甚至继续增长，只是工作流程会更像人机协作，单位产出所需的人数更少。软件开发就是最典型的例子。","sourcesLabel":"数据来源与原始链接","sourceList":["仓库主入口：<a href="{repo}" target="_blank" rel="noopener noreferrer">mariodian/jobs · filters 分支</a>","方法与项目说明：<a href="{readme}" target="_blank" rel="noopener noreferrer">README.md</a>","职业与就业数据：<a href="{csv}" target="_blank" rel="noopener noreferrer">occupations.csv</a>","AI exposure 打分结果：<a href="{scores}" target="_blank" rel="noopener noreferrer">scores.json</a>","底层公开来源：<a href="{bls}" target="_blank" rel="noopener noreferrer">U.S. Bureau of Labor Statistics · Occupational Outlook Handbook</a>"],"methodLabel":"这页是怎么算的","methodList":["红色这组定义为 exposure 8–10；绿色这组定义为 exposure 0–2。","所有占比、工资和增长前景，都是按 2024 年 jobs 数量做加权，不是简单平均。","有一个职业 Military careers 在 CSV 里没有 jobs count，因此没有参与加权计算。","中间地带是 exposure 3–7，占全部就业的大头，所以这页不是说世界只剩红和绿两类工作。"],"methodNote":"这是一份解释型页面，不是官方预测。它更适合帮助普通人理解哪类工作更可能先被 AI 改变。","footerLeft":"适合直接部署成静态站点。","footerRight":"推荐流程：GitHub 仓库 + Cloudflare Pages。"},"en":{"navDistribution":"View jobs distribution","brandTitle":"AI Job Exposure Report","brandSubtitle":"Rebuilt from the mariodian/jobs filters branch dataset","heroKicker":"A public-friendly version: this is not about who loses a job tomorrow, but about which jobs are easier for AI to reshape","heroTitle":"Which jobs are easier for AI to reshape, and which still rely more on people","heroText":"This page splits the repo's AI exposure scores into two ends of the spectrum: jobs that are easier for AI to change, and jobs that still depend more on people showing up in the real world. Risk here is not a moral judgment and not a prediction of instant job loss. It is shorthand for how strongly AI may change the work itself and the amount of labor needed.","heroBtn1":"See the key comparison","heroBtn2":"See the data source","card1Label":"Coverage","card1Text":"This page covers 143.1M jobs on a 2024-employment-weighted basis","card1Note":"341 of the 342 occupations can be used in weighted calculations","card2Label":"More exposed to AI change","card2Text":"Scores 8–10, as a share of all jobs","card3Label":"Less exposed for now","card3Text":"Scores 0–2, as a share of all jobs","card4Label":"Middle zone","card4Text":"Scores 3–7, where most jobs actually sit","quickPill1":"Key gap","quickTitle1":"The weighted average is lower than the simple average","quickText1":"Across all occupations, the simple average exposure is 5.3. Once weighted by employment, it drops to 4.9. That means the biggest job masses are somewhat less exposed than the occupation list alone makes them look.","quickPill2":"Main mass","quickTitle2":"The biggest block is not red or green. It is the middle zone","quickText2":"Scores 3–7 account for 61.5% of all jobs in this weighted view. That matters because most work is neither untouched nor about to disappear overnight.","quickPill3":"Most shareable","quickTitle3":"The less-exposed side has slightly more jobs, but the more-exposed side pays more","quickText3":"The lower-exposure group carries about 4.7M more jobs than the higher-exposure group. But the higher-exposure group has a much higher weighted median pay. That is the most counterintuitive part of this page.","legendHighTag":"Red: more exposed to AI change","legendHighTitle":"Usually digital, document-heavy, and done mostly on a screen","legendHighText":"Scheduling, document work, customer support, reporting, analysis, coding, and review all live here. AI does not have to fully replace the job to reduce the labor needed per unit of output.","legendLowTag":"Green: less exposed for now","legendLowTitle":"Usually tied to physical presence, manual action, care, or messy real-world settings","legendLowText":"Moving goods, cleaning, repair, construction, and care work fit here. AI can still help, but it cannot easily leap over the last mile of being physically present.","legendMidTag":"Blue: the middle zone","legendMidTitle":"Most jobs are not absolutely safe and not about to vanish either","legendMidText":"That is why AI-and-jobs debates are often misread: people flatten a continuous spectrum into a yes-or-no story.","panelTitle":"What really separates the two sides","panelText":"To make the contrast easier to read, this page defines the more-exposed group as exposure 8–10 and the less-exposed group as exposure 0–2. That produces cleaner edges for a public audience.","highTag":"More exposed to AI change · scores 8–10","highTitle":"Higher-exposure jobs","highText":"These jobs are more likely to happen inside the computer: high information density, repeatable workflows, and digital output. That makes them easier for AI to change first.","lowTag":"Less exposed for now · scores 0–2","lowTitle":"Lower-exposure jobs","lowText":"These jobs depend more on physical presence, human contact, or real-time handling of messy environments, which makes them harder to absorb into software alone.","highStats":["Occupations","Jobs","Weighted median pay","Weighted outlook"],"lowStats":["Occupations","Jobs","Weighted median pay","Weighted outlook"],"comparison":"Direct comparison","comparisonText":"The useful question is not the score by itself. It is how much employment each side carries, how well it pays, and how fast it is expected to grow.","compareLabels":{"jobs":"Jobs","pay":"Weighted median pay","outlook":"Weighted outlook","occupations":"Occupations"},"compareSeriesHigh":"More exposed to AI change","compareSeriesLow":"Less exposed for now","signalTitle":"The clearest signal","signalText":"In this dataset, the jobs that currently rely more on people still carry slightly more employment at {lowJobs}, compared with {highJobs} for the more AI-exposed side. But pay flips the other way: the higher-exposure group averages about {highPay}, well above {lowPay} for the lower-exposure side. So the first big AI shock in this framework is not simply about low-wage work. It is about work that is highly digital, information-dense, and computable.","readTitle":"How not to misread this","readText":"Do not read red as immediate disappearance, and do not read green as permanent safety. A better reading is that red jobs are more likely to face earlier task redesign and headcount compression, while green jobs are more likely to be surrounded by AI tools before they are directly replaced.","jobsTitle":"Representative jobs","jobsText":"These are not random examples. They are large employment categories from each side, explained in plain language.","highJobsLabel":"Representative jobs that are more exposed to AI change","lowJobsLabel":"Representative jobs that rely more on people for now","thJob":"Job","thJobs":"Jobs","thPay":"Median pay","thOutlook":"Outlook","jobSub":"Score {exposure} · Entry education: {education}","limitsTitle":"What this report does not tell you","limitsText":"A page that is good enough to publish should explain its boundaries, not just its conclusion. These two points help prevent over-reading.","limitBox1Title":"It is not an official forecast","limitBox1Text":"The exposure scores come from the repo author's rubric plus a large language model. That makes the page interpretive and useful, but it is not the same thing as an official employment forecast from a government agency.","limitBox2Title":"It is about reshaping, not only replacement","limitBox2Text":"A high-exposure job does not have to vanish. Many such jobs may continue to grow, but with more AI inside the workflow and fewer people needed per unit of output. Software development is a good example.","sourcesLabel":"Source links","sourceList":["Repository entry point: <a href="{repo}" target="_blank" rel="noopener noreferrer">mariodian/jobs · filters branch</a>","Project method and overview: <a href="{readme}" target="_blank" rel="noopener noreferrer">README.md</a>","Occupation and employment data: <a href="{csv}" target="_blank" rel="noopener noreferrer">occupations.csv</a>","AI exposure scores: <a href="{scores}" target="_blank" rel="noopener noreferrer">scores.json</a>","Public upstream source: <a href="{bls}" target="_blank" rel="noopener noreferrer">U.S. Bureau of Labor Statistics · Occupational Outlook Handbook</a>"],"methodLabel":"How this page is computed","methodList":["The red group is defined as exposure 8–10. The green group is defined as exposure 0–2.","All shares, pay, and outlook numbers are weighted by 2024 jobs, not simple averages.","One occupation, Military careers, has no jobs count in the CSV, so it is excluded from the weighted calculations.","The middle zone is exposure 3–7 and still accounts for most jobs, so this page is not claiming the world contains only two kinds of work."],"methodNote":"This is an explanatory page, not an official forecast. It is best used to help readers understand which kinds of work may be reshaped first.","footerLeft":"Ready to deploy as a static site.","footerRight":"Recommended flow: GitHub repository + Cloudflare Pages."}}`);
+
+    const fmt = {
+      locale() { return document.documentElement.lang === 'zh-CN' ? 'zh-CN' : 'en-US'; },
+      money(n) { return new Intl.NumberFormat(this.locale(), { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n); },
+      jobsM(n) { return `${n.toFixed(1)}M`; },
+      pct(n) { return `${n.toFixed(1)}%`; },
+      num(n) { return new Intl.NumberFormat(this.locale()).format(n); }
+    };
+
+    const statsConfig = {
+      high: [
+        () => DATA.groups.high.occupations,
+        () => fmt.jobsM(DATA.groups.high.jobsM),
+        () => fmt.money(DATA.groups.high.weightedPay),
+        () => fmt.pct(DATA.groups.high.weightedOutlook)
+      ],
+      low: [
+        () => DATA.groups.low.occupations,
+        () => fmt.jobsM(DATA.groups.low.jobsM),
+        () => fmt.money(DATA.groups.low.weightedPay),
+        () => fmt.pct(DATA.groups.low.weightedOutlook)
+      ]
+    };
+
+    const compareConfig = [
+      { key: 'jobs', high: DATA.groups.high.jobsM, low: DATA.groups.low.jobsM, highText: () => fmt.jobsM(DATA.groups.high.jobsM), lowText: () => fmt.jobsM(DATA.groups.low.jobsM) },
+      { key: 'pay', high: DATA.groups.high.weightedPay, low: DATA.groups.low.weightedPay, highText: () => fmt.money(DATA.groups.high.weightedPay), lowText: () => fmt.money(DATA.groups.low.weightedPay) },
+      { key: 'outlook', high: DATA.groups.high.weightedOutlook + 10, low: DATA.groups.low.weightedOutlook + 10, highText: () => fmt.pct(DATA.groups.high.weightedOutlook), lowText: () => fmt.pct(DATA.groups.low.weightedOutlook) },
+      { key: 'occupations', high: DATA.groups.high.occupations, low: DATA.groups.low.occupations, highText: () => fmt.num(DATA.groups.high.occupations), lowText: () => fmt.num(DATA.groups.low.occupations) }
+    ];
+
+    function setText(id, value) {
+      const el = document.getElementById(id);
+      if (el) el.textContent = value;
+    }
+    function fillList(id, items) {
+      const root = document.getElementById(id);
+      root.innerHTML = '';
+      items.forEach(item => {
+        const li = document.createElement('li');
+        li.textContent = item;
+        root.appendChild(li);
+      });
+    }
+    function fillListHTML(id, items) {
+      const root = document.getElementById(id);
+      root.innerHTML = '';
+      items.forEach(item => {
+        const li = document.createElement('li');
+        li.innerHTML = item;
+        root.appendChild(li);
+      });
+    }
+    function renderStats(lang) {
+      const t = I18N[lang];
+      [['highStats', 'high'], ['lowStats', 'low']].forEach(([id, group]) => {
+        const root = document.getElementById(id);
+        root.innerHTML = '';
+        t[group + 'Stats'].forEach((label, i) => {
+          const box = document.createElement('div');
+          box.className = 'stat';
+          box.innerHTML = `<strong>${statsConfig[group][i]()}</strong><span>${label}</span>`;
+          root.appendChild(box);
+        });
+      });
+    }
+    function renderCompare(lang) {
+      const t = I18N[lang];
+      const root = document.getElementById('compareRows');
+      root.innerHTML = '';
+      compareConfig.forEach(row => {
+        const scale = Math.max(row.high, row.low);
+        const wrap = document.createElement('div');
+        wrap.className = 'compare-row';
+        wrap.innerHTML = `
+          <div class="compare-label">${t.compareLabels[row.key]}</div>
+          <div class="bar-group">
+            <div class="bar-line">
+              <div class="line-label">${t.compareSeriesHigh}</div>
+              <div class="bar-track"><div class="bar-fill high" style="width:${(row.high / scale) * 100}%"></div></div>
+              <div class="bar-value">${row.highText()}</div>
+            </div>
+            <div class="bar-line">
+              <div class="line-label">${t.compareSeriesLow}</div>
+              <div class="bar-track"><div class="bar-fill low" style="width:${(row.low / scale) * 100}%"></div></div>
+              <div class="bar-value">${row.lowText()}</div>
+            </div>
+          </div>
+        `;
+        root.appendChild(wrap);
+      });
+    }
+    function renderTable(id, rows, lang) {
+      const root = document.getElementById(id);
+      const t = I18N[lang];
+      root.innerHTML = '';
+      rows.forEach(row => {
+        const tr = document.createElement('tr');
+        const title = lang === 'zh' ? row.title_zh : row.title_en;
+        const altTitle = lang === 'zh' ? row.title_en : row.title_zh;
+        const education = lang === 'zh' ? row.education_zh : row.education_en;
+        const why = lang === 'zh' ? row.why_zh : row.why_en;
+        tr.innerHTML = `
+          <td>
+            <div class="job-name">${title}</div>
+            <div class="job-sub">${altTitle}</div>
+            <div class="job-sub">${t.jobSub.replace('{exposure}', row.exposure).replace('{education}', education)}</div>
+            <div class="why">${why}</div>
+          </td>
+          <td>${fmt.jobsM(row.jobsM)}</td>
+          <td>${fmt.money(row.pay)}</td>
+          <td>${fmt.pct(row.outlook)}</td>
+        `;
+        root.appendChild(tr);
+      });
+    }
+    function renderSourceLinks(lang) {
+      const t = I18N[lang];
+      const replace = (s) => s
+        .replace('{repo}', DATA.summary.repoUrl)
+        .replace('{readme}', DATA.summary.readmeUrl)
+        .replace('{csv}', DATA.summary.csvUrl)
+        .replace('{scores}', DATA.summary.scoresUrl)
+        .replace('{bls}', DATA.summary.blsUrl);
+      fillListHTML('sourceList', t.sourceList.map(replace));
+    }
+    function applyTranslations(lang) {
+      const t = I18N[lang];
+      document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
+      document.title = lang === 'zh' ? 'AI 工作暴露度报告' : 'AI Job Exposure Report';
+      [
+        'brandTitle','brandSubtitle','navDistribution','heroKicker','heroTitle','heroText','heroBtn1','heroBtn2',
+        'card1Label','card1Text','card1Note','card2Label','card2Text','card3Label','card3Text','card4Label','card4Text',
+        'quickPill1','quickTitle1','quickText1','quickPill2','quickTitle2','quickText2','quickPill3','quickTitle3','quickText3',
+        'legendHighTag','legendHighTitle','legendHighText','legendLowTag','legendLowTitle','legendLowText','legendMidTag','legendMidTitle','legendMidText',
+        'panelTitle','panelText','highTag','highTitle','highText','lowTag','lowTitle','lowText',
+        'comparison','comparisonText','signalTitle','readTitle','readText','jobsTitle','jobsText','highJobsLabel','lowJobsLabel',
+        'limitsTitle','limitsText','limitBox1Title','limitBox1Text','limitBox2Title','limitBox2Text','sourcesLabel','methodLabel',
+        'footerLeft','footerRight'
+      ].forEach(id => setText(id, t[id]));
+      setText('thJob1', t.thJob); setText('thJobs1', t.thJobs); setText('thPay1', t.thPay); setText('thOutlook1', t.thOutlook);
+      setText('thJob2', t.thJob); setText('thJobs2', t.thJobs); setText('thPay2', t.thPay); setText('thOutlook2', t.thOutlook);
+      setText('totalJobs', fmt.jobsM(DATA.summary.totalJobsM));
+      setText('highShare', fmt.pct(DATA.groups.high.sharePct));
+      setText('lowShare', fmt.pct(DATA.groups.low.sharePct));
+      setText('midShare', fmt.pct(DATA.groups.mid.sharePct));
+      const signal = t.signalText
+        .replace('{lowJobs}', fmt.jobsM(DATA.groups.low.jobsM))
+        .replace('{highJobs}', fmt.jobsM(DATA.groups.high.jobsM))
+        .replace('{highPay}', fmt.money(DATA.groups.high.weightedPay))
+        .replace('{lowPay}', fmt.money(DATA.groups.low.weightedPay));
+      setText('signalText', signal);
+      renderSourceLinks(lang);
+      fillList('methodList', t.methodList);
+      setText('methodNote', t.methodNote);
+      renderStats(lang);
+      renderCompare(lang);
+      renderTable('highTable', DATA.highTop, lang);
+      renderTable('lowTable', DATA.lowTop, lang);
+      document.querySelectorAll('.lang-btn').forEach(btn => {
+        const active = btn.dataset.lang === lang;
+        btn.classList.toggle('active', active);
+        btn.setAttribute('aria-selected', active ? 'true' : 'false');
+      });
+    }
+    document.querySelectorAll('.lang-btn').forEach(btn => btn.addEventListener('click', () => applyTranslations(btn.dataset.lang)));
+    applyTranslations('zh');
+  </script>
+</body>
+</html>

@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Jobs Distribution by AI Exposure</title>
+  <meta name="description" content="Employment-weighted distribution of U.S. jobs by AI exposure score, rebuilt from the mariodian/jobs filters branch dataset." />
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml" />
+  <style>
+    :root { --bg: #0b1020; --panel: #131a2e; --ink: #eef2ff; --muted: #a8b3cf; --accent2: #a78bfa; --border: rgba(255,255,255,.08); --max: 1220px; }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: Inter, ui-sans-serif, system-ui, sans-serif; color: var(--ink); background: radial-gradient(circle at top, #152042 0, var(--bg) 40%); line-height: 1.5; }
+    a { color: #93c5fd; }
+    .wrap { max-width: var(--max); margin: 0 auto; padding: 24px 18px 44px; }
+    .topbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 20px; position: sticky; top: 0; z-index: 10; background: rgba(11,16,32,.58); backdrop-filter: blur(10px); padding: 10px 0 12px; }
+    .navset { display: flex; gap: 10px; flex-wrap: wrap; }
+    .navchip { padding: 8px 14px; border-radius: 999px; border: 1px solid var(--border); background: rgba(255,255,255,.05); color: var(--muted); text-decoration: none; font-weight: 600; }
+    .navchip.active, .navchip:hover { color: white; }
+    h1, h2, h3 { margin: 0; }
+    .sub { color: var(--muted); margin-top: 10px; max-width: 920px; }
+    .grid { display: grid; gap: 16px; }
+    .cards { grid-template-columns: repeat(4, minmax(0, 1fr)); margin-top: 22px; }
+    .card { background: linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.01)); border: 1px solid var(--border); border-radius: 20px; padding: 18px; box-shadow: 0 12px 30px rgba(0,0,0,.18); backdrop-filter: blur(8px); }
+    .eyebrow { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 8px; }
+    .big { font-size: 34px; font-weight: 760; }
+    .small { color: var(--muted); font-size: 13px; margin-top: 6px; }
+    .layout { display: grid; grid-template-columns: 1.5fr .95fr; gap: 16px; margin-top: 18px; }
+    .title-row { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 14px; }
+    .title-row span { color: var(--muted); font-size: 13px; }
+    svg { width: 100%; height: auto; display: block; }
+    .bar { fill: rgba(125, 211, 252, .72); cursor: pointer; transition: fill .15s ease; }
+    .bar:hover, .bar.active { fill: var(--accent2); }
+    .pill-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+    .pill { border: 1px solid var(--border); background: rgba(255,255,255,.02); color: var(--muted); border-radius: 999px; padding: 10px 12px; font-size: 13px; }
+    .pill strong { color: var(--ink); }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
+    th { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .06em; }
+    .band-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: 12px; }
+    .band { border: 1px solid var(--border); border-radius: 18px; background: rgba(255,255,255,.025); padding: 16px; }
+    .band p, .note, .summary { color: var(--muted); margin: 8px 0 0; }
+    .section { margin-top: 18px; }
+    .note { font-size: 12px; }
+    footer { margin-top: 28px; padding-top: 18px; border-top: 1px solid rgba(255,255,255,.08); color: var(--muted); font-size: 14px; display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+    @media (max-width: 980px) { .cards, .layout, .band-grid { grid-template-columns: 1fr; } .big { font-size: 30px; } .topbar { position: static; } }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="topbar">
+      <div>
+        <h1>Jobs distribution by AI exposure</h1>
+        <p class="sub">This page rebuilds the employment-weighted distribution view from the repository data. The chart shows where the labor mass sits, not just how many occupations land in each score bucket.</p>
+      </div>
+      <div class="navset">
+        <a class="navchip" href="/">Main report</a>
+        <a class="navchip active" href="/distribution.html">Distribution page</a>
+      </div>
+    </div>
+
+    <div class="grid cards">
+      <div class="card"><div class="eyebrow">Employment covered</div><div class="big" id="jobsTotal"></div><div class="small">2024 jobs across occupations with jobs counts</div></div>
+      <div class="card"><div class="eyebrow">Weighted exposure</div><div class="big" id="weightedAvg"></div><div class="small">Employment-weighted average exposure</div></div>
+      <div class="card"><div class="eyebrow">Simple average</div><div class="big" id="simpleAvg"></div><div class="small">Unweighted mean across occupations</div></div>
+      <div class="card"><div class="eyebrow">Coverage</div><div class="big" id="coverage"></div><div class="small">Weighted stats exclude 1 occupation with no jobs count</div></div>
+    </div>
+
+    <div class="layout">
+      <div class="card">
+        <div class="title-row"><h2>Distribution by score</h2><span>Click a bar to inspect that bucket</span></div>
+        <svg id="chart" viewBox="0 0 820 420"></svg>
+        <div class="pill-row" id="insights"></div>
+      </div>
+      <div class="card">
+        <div class="title-row"><h2 id="detailHeading">Exposure 7</h2><span id="detailMeta">Selected bucket</span></div>
+        <table>
+          <thead><tr><th>Occupation</th><th>Jobs</th><th>Median pay</th></tr></thead>
+          <tbody id="detailTable"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card section">
+      <h2>What the shape says</h2>
+      <p class="summary" id="narrative"></p>
+      <div class="grid band-grid" id="bands"></div>
+    </div>
+
+    <div class="card section">
+      <h2>All score buckets</h2>
+      <table>
+        <thead>
+          <tr><th>Exposure</th><th>Jobs</th><th>Share of jobs</th><th>Occupations</th><th>Median pay</th><th>Avg outlook</th></tr>
+        </thead>
+        <tbody id="bucketTable"></tbody>
+      </table>
+      <div class="note">Source data used here: occupations.csv + scores.json from the filters branch of mariodian/jobs. Weighted stats use 341 occupations because Military careers has no jobs count in the CSV.</div>
+    </div>
+
+    <footer>
+      <div>Source repo: <a href="https://github.com/mariodian/jobs/tree/filters" target="_blank" rel="noopener noreferrer">mariodian/jobs · filters</a></div>
+      <div>Upstream public source: <a href="https://www.bls.gov/ooh/" target="_blank" rel="noopener noreferrer">BLS Occupational Outlook Handbook</a></div>
+    </footer>
+  </div>
+
+  <script>
+    const data = {"summary": {"occupationsTotal": 342, "occupationsWeighted": 341, "jobsM": 143.1, "simpleAvg": 5.3, "weightedAvg": 4.9}, "hist": [{"exposure": 0, "jobs": 0, "jobsM": 0.0, "jobsPct": 0.0, "occupations": 0, "medianPay": 0, "avgOutlook": 0}, {"exposure": 1, "jobs": 6237200, "jobsM": 6.24, "jobsPct": 4.4, "occupations": 9, "medianPay": 50970, "avgOutlook": 4.7}, {"exposure": 2, "jobs": 23699400, "jobsM": 23.7, "jobsPct": 16.6, "occupations": 36, "medianPay": 48620, "avgOutlook": 6.4}, {"exposure": 3, "jobs": 23498100, "jobsM": 23.5, "jobsPct": 16.4, "occupations": 47, "medianPay": 59420, "avgOutlook": 5.0}, {"exposure": 4, "jobs": 18731900, "jobsM": 18.73, "jobsPct": 13.1, "occupations": 41, "medianPay": 62910, "avgOutlook": 4.0}, {"exposure": 5, "jobs": 10977800, "jobsM": 10.98, "jobsPct": 7.7, "occupations": 43, "medianPay": 67440, "avgOutlook": 5.2}, {"exposure": 6, "jobs": 10912700, "jobsM": 10.91, "jobsPct": 7.6, "occupations": 35, "medianPay": 80060, "avgOutlook": 3.5}, {"exposure": 7, "jobs": 23801200, "jobsM": 23.8, "jobsPct": 16.6, "occupations": 70, "medianPay": 82180, "avgOutlook": 3.1}, {"exposure": 8, "jobs": 10840100, "jobsM": 10.84, "jobsPct": 7.6, "occupations": 29, "medianPay": 89990, "avgOutlook": 5.0}, {"exposure": 9, "jobs": 14324200, "jobsM": 14.32, "jobsPct": 10.0, "occupations": 30, "medianPay": 73765, "avgOutlook": 2.8}, {"exposure": 10, "jobs": 43900, "jobsM": 0.04, "jobsPct": 0.0, "occupations": 1, "medianPay": 37550, "avgOutlook": -5.0}], "bands": [{"band": "0-3 Low", "jobsM": 53.4, "jobsPct": 37.3, "occupations": 92}, {"band": "4-6 Mid", "jobsM": 40.6, "jobsPct": 28.4, "occupations": 119}, {"band": "7-10 High", "jobsM": 49.0, "jobsPct": 34.3, "occupations": 130}], "topByScore": {"1": [{"title": "Janitors and building cleaners", "jobsM": 2.4, "pay": 35930}, {"title": "Construction laborers and helpers", "jobsM": 1.6, "pay": 46050}, {"title": "Grounds maintenance workers", "jobsM": 1.3, "pay": 38470}], "2": [{"title": "Hand laborers and material movers", "jobsM": 6.9, "pay": 37680}, {"title": "Home health and personal care aides", "jobsM": 4.3, "pay": 34900}, {"title": "General maintenance and repair workers", "jobsM": 1.6, "pay": 48620}], "3": [{"title": "Food and beverage serving and related workers", "jobsM": 5.0, "pay": 31040}, {"title": "Cooks", "jobsM": 2.8, "pay": 35760}, {"title": "Waiters and waitresses", "jobsM": 2.3, "pay": 33760}], "4": [{"title": "Retail sales workers", "jobsM": 4.6, "pay": 38910}, {"title": "Nurses", "jobsM": 3.4, "pay": 93490}, {"title": "Customer service representatives", "jobsM": 2.9, "pay": 40560}], "5": [{"title": "Cashiers", "jobsM": 3.3, "pay": 31330}, {"title": "Social workers", "jobsM": 0.9, "pay": 61020}, {"title": "Stockers and order fillers", "jobsM": 0.9, "pay": 39180}], "6": [{"title": "Sales representatives of wholesale and manufacturing", "jobsM": 1.4, "pay": 79680}, {"title": "Industrial machinery mechanics, machinery maintenance workers, and millwrights", "jobsM": 0.7, "pay": 65950}, {"title": "Medical and health services managers", "jobsM": 0.6, "pay": 117960}], "7": [{"title": "Secretaries and administrative assistants", "jobsM": 3.0, "pay": 47000}, {"title": "Accountants and auditors", "jobsM": 1.6, "pay": 81680}, {"title": "Lawyers", "jobsM": 0.9, "pay": 151160}], "8": [{"title": "Software developers, quality assurance analysts, and testers", "jobsM": 1.9, "pay": 133080}, {"title": "Graphic designers", "jobsM": 0.3, "pay": 61910}, {"title": "Data scientists", "jobsM": 0.2, "pay": 119040}], "9": [{"title": "Computer programmers", "jobsM": 0.3, "pay": 99000}, {"title": "Paralegals and legal assistants", "jobsM": 0.3, "pay": 61210}, {"title": "Web developers and digital designers", "jobsM": 0.2, "pay": 98670}], "10": [{"title": "Word processors and typists", "jobsM": 0.0, "pay": 37550}]}}};
+    const fmtM = n => `${n.toFixed(1)}M`;
+    const fmtMoney = n => n ? `$${Math.round(n).toLocaleString()}` : '—';
+    document.getElementById('jobsTotal').textContent = fmtM(data.summary.jobsM);
+    document.getElementById('weightedAvg').textContent = data.summary.weightedAvg.toFixed(1);
+    document.getElementById('simpleAvg').textContent = data.summary.simpleAvg.toFixed(1);
+    document.getElementById('coverage').textContent = `${data.summary.occupationsWeighted} / ${data.summary.occupationsTotal}`;
+    const svg = document.getElementById('chart');
+    const W = 820, H = 420, m = { top: 22, right: 14, bottom: 42, left: 54 };
+    const innerW = W - m.left - m.right;
+    const innerH = H - m.top - m.bottom;
+    const maxY = Math.max(...data.hist.map(d => d.jobsM)) * 1.12;
+    const NS = 'http://www.w3.org/2000/svg';
+    const g = document.createElementNS(NS, 'g');
+    g.setAttribute('transform', `translate(${m.left},${m.top})`);
+    svg.appendChild(g);
+    for (let i = 0; i <= 5; i++) {
+      const yVal = maxY * i / 5;
+      const y = innerH - (yVal / maxY) * innerH;
+      const line = document.createElementNS(NS, 'line');
+      line.setAttribute('x1', 0); line.setAttribute('x2', innerW); line.setAttribute('y1', y); line.setAttribute('y2', y);
+      line.setAttribute('stroke', 'rgba(255,255,255,.12)');
+      g.appendChild(line);
+      const label = document.createElementNS(NS, 'text');
+      label.setAttribute('x', -10); label.setAttribute('y', y + 4); label.setAttribute('text-anchor', 'end');
+      label.setAttribute('fill', 'rgba(255,255,255,.65)'); label.setAttribute('font-size', '11');
+      label.textContent = fmtM(yVal); g.appendChild(label);
+    }
+    const barW = innerW / data.hist.length * 0.72;
+    const gap = innerW / data.hist.length * 0.28;
+    const bars = [];
+    data.hist.forEach((d, i) => {
+      const x = i * (barW + gap) + gap / 2;
+      const h = (d.jobsM / maxY) * innerH;
+      const y = innerH - h;
+      const rect = document.createElementNS(NS, 'rect');
+      rect.setAttribute('x', x); rect.setAttribute('y', y); rect.setAttribute('width', barW); rect.setAttribute('height', h); rect.setAttribute('rx', 8);
+      rect.setAttribute('class', 'bar'); rect.dataset.score = d.exposure;
+      g.appendChild(rect); bars.push(rect);
+      const xt = document.createElementNS(NS, 'text');
+      xt.setAttribute('x', x + barW / 2); xt.setAttribute('y', innerH + 22); xt.setAttribute('text-anchor', 'middle');
+      xt.setAttribute('fill', 'rgba(255,255,255,.7)'); xt.setAttribute('font-size', '11'); xt.textContent = d.exposure; g.appendChild(xt);
+      if (d.jobsM > 0.6) {
+        const txt = document.createElementNS(NS, 'text');
+        txt.setAttribute('x', x + barW / 2); txt.setAttribute('y', y - 8); txt.setAttribute('text-anchor', 'middle');
+        txt.setAttribute('fill', 'rgba(255,255,255,.95)'); txt.setAttribute('font-size', '12'); txt.setAttribute('font-weight', '700');
+        txt.textContent = `${d.jobsM.toFixed(1)}M`; g.appendChild(txt);
+      }
+    });
+    const xLabel = document.createElementNS(NS, 'text');
+    xLabel.setAttribute('x', m.left + innerW / 2); xLabel.setAttribute('y', H - 8); xLabel.setAttribute('text-anchor', 'middle');
+    xLabel.setAttribute('fill', 'rgba(255,255,255,.7)'); xLabel.setAttribute('font-size', '12'); xLabel.textContent = 'AI exposure score'; svg.appendChild(xLabel);
+    const yLabel = document.createElementNS(NS, 'text');
+    yLabel.setAttribute('x', 16); yLabel.setAttribute('y', m.top + innerH / 2); yLabel.setAttribute('transform', `rotate(-90 16 ${m.top + innerH / 2})`);
+    yLabel.setAttribute('text-anchor', 'middle'); yLabel.setAttribute('fill', 'rgba(255,255,255,.7)'); yLabel.setAttribute('font-size', '12'); yLabel.textContent = 'Jobs (millions)'; svg.appendChild(yLabel);
+    const bucketTable = document.getElementById('bucketTable');
+    data.hist.forEach(d => { const tr = document.createElement('tr'); tr.innerHTML = `<td><strong>${d.exposure}</strong></td><td>${fmtM(d.jobsM)}</td><td>${d.jobsPct.toFixed(1)}%</td><td>${d.occupations}</td><td>${fmtMoney(d.medianPay)}</td><td>${d.avgOutlook ? d.avgOutlook.toFixed(1) + '%' : '—'}</td>`; bucketTable.appendChild(tr); });
+    const bandWrap = document.getElementById('bands');
+    data.bands.forEach(b => { const div = document.createElement('div'); div.className = 'band'; div.innerHTML = `<h3>${b.band}</h3><p><strong>${fmtM(b.jobsM)}</strong> jobs, or <strong>${b.jobsPct.toFixed(1)}%</strong> of the weighted total.</p><p>${b.occupations} occupations in this range.</p>`; bandWrap.appendChild(div); });
+    const topScores = [...data.hist].sort((a, b) => b.jobs - a.jobs).slice(0, 3);
+    document.getElementById('narrative').textContent = `The shape is closer to a split market than a smooth curve. Employment piles up at scores ${topScores[0].exposure}, ${topScores[1].exposure}, and ${topScores[2].exposure}, while the absolute extremes stay tiny. That is why the simple occupation average is ${data.summary.simpleAvg.toFixed(1)}, but the employment-weighted average slips to ${data.summary.weightedAvg.toFixed(1)}: the biggest job masses are still not concentrated at the very highest exposure levels.`;
+    const insightTexts = [`Top bucket by jobs: exposure ${topScores[0].exposure}`, `Low 0–3 = ${data.bands[0].jobsPct.toFixed(1)}% of jobs`, `Mid 4–6 = ${data.bands[1].jobsPct.toFixed(1)}% of jobs`, `High 7–10 = ${data.bands[2].jobsPct.toFixed(1)}% of jobs`];
+    const insightWrap = document.getElementById('insights');
+    insightTexts.forEach(t => { const div = document.createElement('div'); div.className = 'pill'; div.innerHTML = t.replace(/(\d+\.\d+%|\d+)/g, '<strong>$1</strong>'); insightWrap.appendChild(div); });
+    function selectScore(score) { bars.forEach(bar => bar.classList.toggle('active', Number(bar.dataset.score) === score)); const bucket = data.hist.find(d => d.exposure === score); document.getElementById('detailHeading').textContent = `Exposure ${score}`; document.getElementById('detailMeta').textContent = `${fmtM(bucket.jobsM)} jobs · ${bucket.jobsPct.toFixed(1)}% share · ${bucket.occupations} occupations`; const tbody = document.getElementById('detailTable'); tbody.innerHTML = ''; (data.topByScore[String(score)] || []).forEach(row => { const tr = document.createElement('tr'); tr.innerHTML = `<td><strong>${row.title}</strong></td><td>${fmtM(row.jobsM)}</td><td>${fmtMoney(row.pay)}</td>`; tbody.appendChild(tr); }); }
+    bars.forEach(bar => bar.addEventListener('click', () => selectScore(Number(bar.dataset.score))));
+    selectScore(7);
+  </script>
+</body>
+</html>
